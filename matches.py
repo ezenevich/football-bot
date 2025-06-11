@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from typing import List, Dict
 
-from config import HEADERS
+from config import HEADERS, FOOTBALL_DATA_TOKEN
 
 
 MatchItem = Dict[str, str]
@@ -135,10 +135,53 @@ def _parse_espn(limit: int = 15) -> List[MatchItem]:
     return matches
 
 
+def _parse_football_data_api(limit: int = 15) -> List[MatchItem]:
+    """Fetch matches from football-data.org API if a token is provided."""
+    if not FOOTBALL_DATA_TOKEN:
+        return []
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    url = (
+        'https://api.football-data.org/v4/matches'
+        f'?dateFrom={today}&dateTo={today}'
+    )
+    headers = {'X-Auth-Token': FOOTBALL_DATA_TOKEN}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        data = r.json()
+    except Exception:
+        return []
+    matches: List[MatchItem] = []
+    for m in data.get('matches', [])[:limit]:
+        utc = m.get('utcDate', '?')
+        tournament = m.get('competition', {}).get('name', '')
+        home = m.get('homeTeam', {}).get('shortName', '?')
+        away = m.get('awayTeam', {}).get('shortName', '?')
+        full_time = m.get('score', {}).get('fullTime', {})
+        home_score = full_time.get('home')
+        away_score = full_time.get('away')
+        match_id = m.get('id')
+        matches.append({
+            'time': utc,
+            'teams': f"{home} - {away}",
+            'score': (
+                f"{home_score}:{away_score}"
+                if home_score is not None and away_score is not None
+                else 'vs'
+            ),
+            'tournament': tournament,
+            'link': (
+                f"https://www.football-data.org/match/{match_id}"
+                if match_id else '#'
+            ),
+        })
+    return matches
+
+
 def fetch_all_matches(limit: int = 15) -> Dict[str, List[MatchItem]]:
     return {
         'Sports.ru': _parse_sportsru(limit),
         'Championat': _parse_championat(limit),
         'Euro-Football': _parse_eurofootball(limit),
         'ESPN': _parse_espn(limit),
+        'Football-Data': _parse_football_data_api(limit),
     }
