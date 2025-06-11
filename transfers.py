@@ -68,9 +68,34 @@ def _parse_eurofootball(limit: int = 5) -> List[TransferItem]:
     return transfers
 
 
+def _parse_skysports(limit: int = 5) -> List[TransferItem]:
+    """Parse transfer rumours from Sky Sports."""
+    url = "https://www.skysports.com/transfer-news"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+    except Exception:
+        return []
+    soup = BeautifulSoup(r.text, "html.parser")
+    transfers: List[TransferItem] = []
+    for item in soup.select('.news-list__item')[:limit]:
+        headline = item.select_one('.news-list__headline')
+        link_tag = item.select_one('a')
+        if not headline or not link_tag:
+            continue
+        transfers.append({
+            'player': headline.get_text(strip=True),
+            'from': '-',
+            'to': '-',
+            'value': '-',
+            'link': link_tag['href'],
+        })
+    return transfers
+
+
 def fetch_all_transfers(limit: int = 5) -> Dict[str, List[TransferItem]]:
     return {
         'Transfermarkt': _parse_transfermarkt(limit),
         'Sports.ru': _parse_sportsru(limit),
         'Euro-Football': _parse_eurofootball(limit),
+        'SkySports': _parse_skysports(limit),
     }
