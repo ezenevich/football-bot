@@ -113,92 +113,101 @@ def get_matches_from_sportsru():
         }]
 
     def get_transfers_from_transfermarkt():
-        """Парсим трансферы с transfermarkt"""
         try:
             url = "https://www.transfermarkt.com/neueste-transfergeruechte/geruechte"
-            r = requests.get(url, headers=HEADERS, timeout=10)
-            soup = BeautifulSoup(r.text, 'html.parser')
 
-            transfers = []
-            for row in soup.select('.odd, .even')[:5]:
-                player = row.select_one('.spielprofil_tooltip')
-                clubs = row.select('.vereinprofil_tooltip')
-                value = row.select_one('.rechts.hauptlink')
+    r = requests.get(url, headers=HEADERS, timeout=10)
+    soup = BeautifulSoup(r.text, 'html.parser')
 
-                if player and len(clubs) >= 2:
-                    transfers.append({
-                        'player': player.text.strip(),
-                        'from': clubs[0].text.strip(),
-                        'to': clubs[1].text.strip(),
-                        'value': value.text.strip() if value else '?',
-                        'link': f"https://www.transfermarkt.com{player['href']}"
-                    })
-            return transfers
-        except Exception as e:
-            print(f"Ошибка парсинга трансферов: {e}")
-            return [{
-                'player': "Нет данных о трансферах",
-                'from': "-",
-                'to': "-",
-                'value': "-",
-                'link': "#"
-            }]
-    @bot.message_handler(func=lambda m: m.text == '📢 Новости')
-    def send_news(message):
-        """Отправляем новости"""
-        news = get_news_from_championat()
-        response = "📰 Последние футбольные новости:\n\n" + "\n\n".join(
-            f"▪️ {item['title']}\n🔗 {item['link']}" for item in news
+    transfers = []
+    for row in soup.select('.odd, .even')[:5]:
+        player = row.select_one('.spielprofil_tooltip')
+        clubs = row.select('.vereinprofil_tooltip')
+        value = row.select_one('.rechts.hauptlink')
+
+        if player and len(clubs) >= 2:
+            transfers.append({
+                'player': player.text.strip(),
+                'from': clubs[0].text.strip(),
+                'to': clubs[1].text.strip(),
+                'value': value.text.strip() if value else '?',
+                'link': f"https://www.transfermarkt.com{player['href']}"
+            })
+    return transfers
+
+except Exception as e:
+print(f"Ошибка парсинга трансферов: {e}")
+return [{
+    'player': "Нет данных о трансферах",
+    'from': "-",
+    'to': "-",
+    'value': "-",
+    'link': "#"
+}]
+
+
+@bot.message_handler(func=lambda m: m.text == '📢 Новости')
+def send_news(message):
+    """Отправляем новости"""
+
+
+news = get_news_from_championat()
+response = "📰 Последние футбольные новости:\n\n" + "\n\n".join(
+    f"▪️ {item['title']}\n🔗 {item['link']}" for item in news
+)
+bot.send_message(message.chat.id, response)
+
+
+@bot.message_handler(func=lambda m: m.text == '⚽️ Матчи')
+def send_matches(message):
+    """Отправляем матчи"""
+    matches = get_matches_from_sportsru()
+
+    if not matches or 'Не удалось' in matches[0]['teams']:
+        bot.send_message(message.chat.id, "⚠️ Не удалось получить информацию о матчах")
+        return
+
+    response = "⚽️ Матчи на сегодня:\n\n"
+
+    for match in matches:
+        response += (
+            f"⏰ {match['time']}\n"
+            f"🏆 {match['tournament']}\n"
+            f"🔹 {match['teams']}\n"
+            f"📊 Счет: {match['score']}\n"
+            f"🔗 {match['link']}\n\n"
         )
+
+    # Разбиваем на части если сообщение слишком длинное
+    if len(response) > 4000:
+        parts = [response[i:i + 4000] for i in range(0, len(response), 4000)]
+        for part in parts:
+            bot.send_message(message.chat.id, part)
+    else:
         bot.send_message(message.chat.id, response)
 
-    @bot.message_handler(func=lambda m: m.text == '⚽️ Матчи')
-    def send_matches(message):
-        """Отправляем матчи"""
-        matches = get_matches_from_sportsru()
 
-        if not matches or 'Не удалось' in matches[0]['teams']:
-            bot.send_message(message.chat.id, "⚠️ Не удалось получить информацию о матчах")
-            return
+@bot.message_handler(func=lambda m: m.text == '🔄 Трансферы')
+def send_transfers(message):
+    """Отправляем трансферы"""
+    transfers = get_transfers_from_transfermarkt()
+    response = "🔄 Последние трансферные слухи:\n\n" + "\n\n".join(
+        f"👤 {t['player']}\n"
+        f"🛫 {t['from']} → 🛬 {t['to']}\n"
+        f"💵 Стоимость: {t['value']}\n"
+        f"🔗 {t['link']}"
+        for t in transfers
+    )
+    bot.send_message(message.chat.id, response)
 
-        response = "⚽️ Матчи на сегодня:\n\n"
 
-        for match in matches:
-            response += (
-                f"⏰ {match['time']}\n"
-                f"🏆 {match['tournament']}\n"
-                f"🔹 {match['teams']}\n"
-                f"📊 Счет: {match['score']}\n"
-                f"🔗 {match['link']}\n\n"
-            )
+@bot.message_handler(func=lambda m: True)
+def handle_unknown(message):
+    """Обработчик неизвестных команд"""
+    bot.send_message(message.chat.id, "Я не понимаю эту команду. Используйте кнопки меню.",
+                     reply_markup=get_main_menu())
 
-        # Разбиваем на части если сообщение слишком длинное
-        if len(response) > 4000:
-            parts = [response[i:i + 4000] for i in range(0, len(response), 4000)]
-            for part in parts:
-                bot.send_message(message.chat.id, part)
-        else:
-            bot.send_message(message.chat.id, response)
 
-    @bot.message_handler(func=lambda m: m.text == '🔄 Трансферы')
-    def send_transfers(message):
-        """Отправляем трансферы"""
-        transfers = get_transfers_from_transfermarkt()
-        response = "🔄 Последние трансферные слухи:\n\n" + "\n\n".join(
-            f"👤 {t['player']}\n"
-            f"🛫 {t['from']} → 🛬 {t['to']}\n"
-            f"💵 Стоимость: {t['value']}\n"
-            f"🔗 {t['link']}"
-            for t in transfers
-        )
-        bot.send_message(message.chat.id, response)
-
-    @bot.message_handler(func=lambda m: True)
-    def handle_unknown(message):
-        """Обработчик неизвестных команд"""
-        bot.send_message(message.chat.id, "Я не понимаю эту команду. Используйте кнопки меню.",
-                         reply_markup=get_main_menu())
-
-    if name == 'main':
-        print("Бот запущен и готов к работе...")
-        bot.infinity_polling()
+if name == 'main':
+    print("Бот запущен и готов к работе...")
+    bot.infinity_polling()
