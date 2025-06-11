@@ -112,38 +112,38 @@ def get_matches_from_sportsru():
             'link': "#"
         }]
 
-    def get_transfers_from_transfermarkt():
-        try:
-            url = "https://www.transfermarkt.com/neueste-transfergeruechte/geruechte"
 
-    r = requests.get(url, headers=HEADERS, timeout=10)
-    soup = BeautifulSoup(r.text, 'html.parser')
+def get_transfers_from_transfermarkt():
+    """Парсим трансферы с transfermarkt.com"""
+    try:
+        url = "https://www.transfermarkt.com/neueste-transfergeruechte/geruechte"
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
 
-    transfers = []
-    for row in soup.select('.odd, .even')[:5]:
-        player = row.select_one('.spielprofil_tooltip')
-        clubs = row.select('.vereinprofil_tooltip')
-        value = row.select_one('.rechts.hauptlink')
+        transfers = []
+        for row in soup.select('.odd, .even')[:5]:
+            player = row.select_one('.spielprofil_tooltip')
+            clubs = row.select('.vereinprofil_tooltip')
+            value = row.select_one('.rechts.hauptlink')
 
-        if player and len(clubs) >= 2:
-            transfers.append({
-                'player': player.text.strip(),
-                'from': clubs[0].text.strip(),
-                'to': clubs[1].text.strip(),
-                'value': value.text.strip() if value else '?',
-                'link': f"https://www.transfermarkt.com{player['href']}"
-            })
-    return transfers
-
-except Exception as e:
-print(f"Ошибка парсинга трансферов: {e}")
-return [{
-    'player': "Нет данных о трансферах",
-    'from': "-",
-    'to': "-",
-    'value': "-",
-    'link': "#"
-}]
+            if player and len(clubs) >= 2:
+                transfers.append({
+                    'player': player.text.strip(),
+                    'from': clubs[0].text.strip(),
+                    'to': clubs[1].text.strip(),
+                    'value': value.text.strip() if value else '?',
+                    'link': f"https://www.transfermarkt.com{player['href']}"
+                })
+        return transfers
+    except Exception as e:
+        print(f"Ошибка парсинга трансферов: {e}")
+        return [{
+            'player': "Нет данных о трансферах",
+            'from': "-",
+            'to': "-",
+            'value': "-",
+            'link': "#"
+        }]
 
 
 @bot.message_handler(func=lambda m: m.text == '📢 Новости')
@@ -208,6 +208,6 @@ def handle_unknown(message):
                      reply_markup=get_main_menu())
 
 
-if name == 'main':
+if __name__ == '__main__':
     print("Бот запущен и готов к работе...")
     bot.infinity_polling()
