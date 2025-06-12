@@ -41,29 +41,31 @@ def _parse_sportsru(limit: int = 15) -> List[MatchItem]:
 
 
 def _parse_championat(limit: int = 15) -> List[MatchItem]:
-    url = "https://www.championat.com/football/_live.html"
-    r = requests.get(url, headers=HEADERS, timeout=10)
+    """Parse matches from Championat's daily statistics page."""
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    url = f"https://www.championat.com/stat/football/{today}"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+    except Exception:
+        return []
     soup = BeautifulSoup(r.text, "html.parser")
     matches: List[MatchItem] = []
-    for row in soup.select('.live-match-item')[:limit]:
-        time_tag = row.select_one('.match-time')
-        time = time_tag.get_text(strip=True) if time_tag else '?'
-        teams = row.select('.team-name')
-        if len(teams) < 2:
+    for item in soup.select('.results-item')[:limit]:
+        date_tag = item.select_one('.results-item__title-date')
+        name_tag = item.select_one('.results-item__title-name')
+        result_tag = item.select_one('.results-item__result-main')
+        status_tag = item.select_one('.results-item__status')
+        if not name_tag:
             continue
-        home_team = teams[0].get_text(strip=True)
-        away_team = teams[1].get_text(strip=True)
-        score = row.select_one('.match-score')
-        score = score.get_text(strip=True) if score else 'vs'
-        tournament = row.select_one('.tournament')
-        tournament = tournament.get_text(strip=True) if tournament else ''
-        link_tag = row.find('a')
-        link = f"https://www.championat.com{link_tag['href']}" if link_tag and link_tag.has_attr('href') else '#'
+        link_tag = item.find('a')
+        link = (
+            f"https://www.championat.com{link_tag['href']}" if link_tag and link_tag.has_attr('href') else '#'
+        )
         matches.append({
-            'time': time,
-            'teams': f"{home_team} - {away_team}",
-            'score': score,
-            'tournament': tournament,
+            'time': date_tag.get_text(strip=True) if date_tag else '?',
+            'teams': name_tag.get_text(strip=True),
+            'score': result_tag.get_text(strip=True) if result_tag else 'vs',
+            'tournament': status_tag.get_text(strip=True) if status_tag else '',
             'link': link,
         })
     return matches
