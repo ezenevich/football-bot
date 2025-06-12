@@ -20,16 +20,20 @@ def _parse_championat(limit: int = 5) -> List[MatchItem]:
     matches: List[MatchItem] = []
     for item in soup.select('.livetable-event')[:limit]:
         date_tag = item.select_one('.livetable-event__time')
-        name_tag = item.select_one('.team-name')
+        name_tags = item.select('.team-name')
         result_tag = item.select_one('.livetable-event__result')
         status_tag = item.select_one('.livetable-event__status')
-        if not name_tag:
+        if not name_tags:
             continue
+        if len(name_tags) >= 2:
+            teams = f"{name_tags[0].get_text(strip=True)} - {name_tags[1].get_text(strip=True)}"
+        else:
+            teams = name_tags[0].get_text(strip=True)
         link_tag = item.find('a')
         link = link_tag['href']
         matches.append({
             'time': date_tag.get_text(strip=True) if date_tag else '?',
-            'teams': name_tag.get_text(strip=True),
+            'teams': teams,
             'score': result_tag.get_text(strip=True) if result_tag else 'vs',
             'tournament': status_tag.get_text(strip=True) if status_tag else '',
             'link': f"https://www.championat.com{link}" if link.startswith('/') else link,
