@@ -39,7 +39,7 @@ def send_news(message):
         for item in items:
             response += (
                 f"▪️ {item['title']}\n"
-                f"<a href=\"{item['link']}\">Читать...</a>\n\n"
+                f"🔗 <a href=\"{item['link']}\">Читать...</a>\n\n"
             )
         response += '\n'
     bot.send_message(message.chat.id, response, parse_mode='HTML')
