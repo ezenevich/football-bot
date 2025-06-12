@@ -14,7 +14,7 @@ bot = TeleBot(BOT_TOKEN)
 
 def _main_menu() -> ReplyKeyboardMarkup:
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    markup.add('📢 Новости', '⚽️ Матчи', '🔄 Трансферы', 'ℹ️ Помощь')
+    markup.add('📢 Новости', '⚽️ Матчи', '🔄 Трансферы')
     return markup
 
 
@@ -82,10 +82,10 @@ def send_transfers(message):
                 f"👤 {t['player']}\n"
                 f"🛫 {t['from']} → 🛬 {t['to']}\n"
                 f"💵 {t['value']}\n"
-                f"🔗 {t['link']}\n\n"
+                f"🔗 <a href=\"{t['link']}\">Смотреть...</a>\n\n"
             )
         response += '\n'
-    bot.send_message(message.chat.id, response)
+    bot.send_message(message.chat.id, response, parse_mode='HTML')
 
 
 @bot.message_handler(func=lambda m: True)
