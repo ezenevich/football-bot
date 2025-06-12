@@ -1,10 +1,9 @@
 import os
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', 'PASTE_YOUR_TOKEN_HERE')
+BOT_TOKEN = os.getenv('BOT_TOKEN', '7428021954:AAGYs1GH45notSeSg3-3YAGeNnLj118-ESk')
 
 # Optional API token for football-data.org. Set this if you want to
 # use the open football API in matches.py.
-FOOTBALL_DATA_TOKEN = os.getenv('FOOTBALL_DATA_TOKEN')
 
 HEADERS = {
     'User-Agent': (
