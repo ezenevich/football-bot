@@ -55,18 +55,20 @@ def send_matches(message):
     for site, items in matches.items():
         response += f'🔹 {site}\n'
         for match in items:
+            score = match.get('score', '')
+            score_part = f" | {score}" if score and score.lower() != 'vs' else ''
             response += (
                 f"⏰ {match['time']}\n"
                 f"🏆 {match['tournament']}\n"
-                f"{match['teams']} | {match['score']}\n"
-                f"🔗 {match['link']}\n\n"
+                f"{match['teams']}{score_part}\n"
+                f"🔗 <a href=\"{match['link']}\">Смотреть...</a>\n\n"
             )
         response += '\n'
     if len(response) > 4000:
         for part in [response[i:i + 4000] for i in range(0, len(response), 4000)]:
-            bot.send_message(message.chat.id, part)
+            bot.send_message(message.chat.id, part, parse_mode='HTML')
     else:
-        bot.send_message(message.chat.id, response)
+        bot.send_message(message.chat.id, response, parse_mode='HTML')
 
 
 @bot.message_handler(func=lambda m: m.text == '🔄 Трансферы')
