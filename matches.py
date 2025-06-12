@@ -98,6 +98,42 @@ def _parse_eurofootball(limit: int = 15) -> List[MatchItem]:
     return matches
 
 
+def _parse_matchtv(limit: int = 15) -> List[MatchItem]:
+    """Parse matches from Match TV's match center."""
+    url = "https://matchtv.ru/match-center"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+    except Exception:
+        return []
+    soup = BeautifulSoup(r.text, "html.parser")
+    matches: List[MatchItem] = []
+    container = soup.select_one("div.mc-tab-content")
+    if not container:
+        return matches
+    for row in container.find_all("div", recursive=False)[:limit]:
+        time_tag = row.select_one(".time, .mc-match__time")
+        time = time_tag.get_text(strip=True) if time_tag else "?"
+        teams = row.select(".team, .mc-match__team-name")
+        if len(teams) < 2:
+            continue
+        home_team = teams[0].get_text(strip=True)
+        away_team = teams[1].get_text(strip=True)
+        score_tag = row.select_one(".score, .mc-match__score")
+        score = score_tag.get_text(strip=True) if score_tag else "vs"
+        tournament_tag = row.select_one(".tournament, .mc-match__tournament")
+        tournament = tournament_tag.get_text(strip=True) if tournament_tag else ""
+        link_tag = row.find("a")
+        link = link_tag["href"] if link_tag and link_tag.has_attr("href") else "#"
+        matches.append({
+            "time": time,
+            "teams": f"{home_team} - {away_team}",
+            "score": score,
+            "tournament": tournament,
+            "link": link,
+        })
+    return matches
+
+
 def _parse_espn(limit: int = 15) -> List[MatchItem]:
     """Parse live matches from ESPN public API."""
     today = datetime.utcnow().strftime('%Y%m%d')
@@ -182,6 +218,7 @@ def fetch_all_matches(limit: int = 15) -> Dict[str, List[MatchItem]]:
         'Sports.ru': _parse_sportsru(limit),
         'Championat': _parse_championat(limit),
         'Euro-Football': _parse_eurofootball(limit),
+        'Match TV': _parse_matchtv(limit),
         'ESPN': _parse_espn(limit),
         'Football-Data': _parse_football_data_api(limit),
     }
