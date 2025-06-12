@@ -58,7 +58,7 @@ def _parse_eurofootball(limit: int = 5) -> List[NewsItem]:
     return result
 
 
-def fetch_all_news(limit: int = 5) -> Dict[str, List[NewsItem]]:
+def fetch_all_news(limit: int = 4) -> Dict[str, List[NewsItem]]:
     return {
         'Championat.com': _parse_championat(limit),
         'Sports.ru': _parse_sportsru(limit),

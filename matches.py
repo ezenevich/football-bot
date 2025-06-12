@@ -5,13 +5,39 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from typing import List, Dict
 
-from config import HEADERS, FOOTBALL_DATA_TOKEN
+from config import HEADERS
 
 
 MatchItem = Dict[str, str]
 
+def _parse_championat(limit: int = 5) -> List[MatchItem]:
+    url = f"https://www.championat.com/football"
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+    except Exception:
+        return []
+    soup = BeautifulSoup(r.text, "html.parser")
+    matches: List[MatchItem] = []
+    for item in soup.select('.livetable-event')[:limit]:
+        date_tag = item.select_one('.livetable-event__time')
+        name_tag = item.select_one('.team-name')
+        result_tag = item.select_one('.livetable-event__result')
+        status_tag = item.select_one('.livetable-event__status')
+        if not name_tag:
+            continue
+        link_tag = item.find('a')
+        link = link_tag['href']
+        matches.append({
+            'time': date_tag.get_text(strip=True) if date_tag else '?',
+            'teams': name_tag.get_text(strip=True),
+            'score': result_tag.get_text(strip=True) if result_tag else 'vs',
+            'tournament': status_tag.get_text(strip=True) if status_tag else '',
+            'link': f"https://www.championat.com{link}" if link.startswith('/') else link,
+        })
+    return matches
 
-def _parse_sportsru(limit: int = 15) -> List[MatchItem]:
+
+def _parse_sportsru(limit: int = 5) -> List[MatchItem]:
     url = "https://www.sports.ru/stat/football/center/today/"
     r = requests.get(url, headers=HEADERS, timeout=10)
     soup = BeautifulSoup(r.text, "html.parser")
@@ -40,38 +66,10 @@ def _parse_sportsru(limit: int = 15) -> List[MatchItem]:
     return matches
 
 
-def _parse_championat(limit: int = 15) -> List[MatchItem]:
-    """Parse matches from Championat's daily statistics page."""
-    today = datetime.utcnow().strftime('%Y-%m-%d')
-    url = f"https://www.championat.com/stat/football/{today}"
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
-    except Exception:
-        return []
-    soup = BeautifulSoup(r.text, "html.parser")
-    matches: List[MatchItem] = []
-    for item in soup.select('.results-item')[:limit]:
-        date_tag = item.select_one('.results-item__title-date')
-        name_tag = item.select_one('.results-item__title-name')
-        result_tag = item.select_one('.results-item__result-main')
-        status_tag = item.select_one('.results-item__status')
-        if not name_tag:
-            continue
-        link_tag = item.find('a')
-        link = (
-            f"https://www.championat.com{link_tag['href']}" if link_tag and link_tag.has_attr('href') else '#'
-        )
-        matches.append({
-            'time': date_tag.get_text(strip=True) if date_tag else '?',
-            'teams': name_tag.get_text(strip=True),
-            'score': result_tag.get_text(strip=True) if result_tag else 'vs',
-            'tournament': status_tag.get_text(strip=True) if status_tag else '',
-            'link': link,
-        })
-    return matches
 
 
-def _parse_eurofootball(limit: int = 15) -> List[MatchItem]:
+
+def _parse_eurofootball(limit: int = 5) -> List[MatchItem]:
     url = "https://www.euro-football.ru/live"
     r = requests.get(url, headers=HEADERS, timeout=10)
     soup = BeautifulSoup(r.text, "html.parser")
@@ -217,10 +215,10 @@ def _parse_football_data_api(limit: int = 15) -> List[MatchItem]:
 
 def fetch_all_matches(limit: int = 15) -> Dict[str, List[MatchItem]]:
     return {
-        'Sports.ru': _parse_sportsru(limit),
-        'Championat': _parse_championat(limit),
-        'Euro-Football': _parse_eurofootball(limit),
-        'Match TV': _parse_matchtv(limit),
-        'ESPN': _parse_espn(limit),
-        'Football-Data': _parse_football_data_api(limit),
+        'Championat.com': _parse_championat(limit),
+        # 'Sports.ru': _parse_sportsru(limit),
+        # 'Euro-Football': _parse_eurofootball(limit),
+        # 'Match TV': _parse_matchtv(limit),
+        # 'ESPN': _parse_espn(limit),
+        # 'Football-Data': _parse_football_data_api(limit),
     }
