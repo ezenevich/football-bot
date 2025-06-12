@@ -37,9 +37,12 @@ def send_news(message):
     for site, items in news.items():
         response += f'🔹 {site}\n'
         for item in items:
-            response += f"▪️ {item['title']}\n🔗 {item['link']}\n"
+            response += (
+                f"▪️ {item['title']}\n"
+                f"<a href=\"{item['link']}\">Читать...</a>\n\n"
+            )
         response += '\n'
-    bot.send_message(message.chat.id, response)
+    bot.send_message(message.chat.id, response, parse_mode='HTML')
 
 
 @bot.message_handler(func=lambda m: m.text == '⚽️ Матчи')
